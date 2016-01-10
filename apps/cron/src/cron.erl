@@ -11,9 +11,10 @@
 
 -define(APP, cron).
 -define(CRON_CONFIG(BufferName), [
-        {monitor, BufferName, cron_monitor, []}, % Start our cron monitor, and
-        {sink, cron_sink, []},                   % the sink, and we only need
-        {stack, BufferName, [cron_sink]}         % one stack running it.
+        {monitor, BufferName, cron_monitor, []},
+        {sink, cron_sink, []},
+        {sink, cron_alarm_sink, [emit,log,drop]},
+        {stack, BufferName, [cron_alarm_sink, cron_sink]}
 ]).
 
 %% @doc Start the Cron service.

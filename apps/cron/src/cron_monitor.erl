@@ -9,50 +9,37 @@
 -behaviour(libemp_monitor).
 
 %% LibEMP Monitor API
--export([
-  register/0,
-  init/2, uninit/1
-]).
+-export([ describe/1, setup/3, destroy/2 ]).
 
 %% Private exports
 -export([loop/2]).
 
--define(MONITOR_VERSION,"1.0.0").
+%% LibEMP Monitor Definition.
+-define(MONITOR_NAME, "cron").
+-define(MONITOR_CONFIG, []).
 
-%% Our event structure that we generate.
--define(TICK_EVENT(Minutes,Hours,Day,Month,DayOfWeek),
-          {tick,Minutes,Hours,Day,Month,DayOfWeek}).
-
-%% A fraction of a minute (1/3rd or 20 seconds) seems like a good frequency to
+%% A fraction of a minute (1/6th or 10 seconds) seems like a good frequency to
 %% validate whether the minute was up or not.
--define(FRACTION, 20*1000).
+-define(FRACTION, 10*1000).
 
 %%% ==========================================================================
 %%% LibEMP Monitor Callbacks
 %%% ==========================================================================
 
-%% @doc Register the `tick' event cron generates every minute.
-register() ->
-  MonitorName = cron,
-  Events = [
-    % It has an arity of 5, and does not need any special treatment.
-    {tick, 5, []}
-  ],
-  Actions = [
-    % This Monitor has no actions that should be opened up to LibEMP.
-  ],
-  Configurations = [
-    % Default configurations should be fine.
-  ],
-  {MonitorName, ?MONITOR_VERSION, Actions, Events, Configurations}.
+%% @doc Return default name and libemp configuration for the Cron monitor. We
+%%   do not need to check the host to see if we are able to run as there are no
+%%   requirements.
+%% @end
+describe( _Args ) ->
+  {ok, ?MONITOR_NAME, ?MONITOR_CONFIG}.
 
 %% @doc Initialize our Monitor.
-init(BufferRefrence,_Args) ->
-  Pid = spawn(?MODULE,loop,[BufferRefrence, current_tick()]),
+setup( _Args, _Config, EMP ) ->
+  Pid = spawn(?MODULE,loop,[EMP, cron_time:current_tick()]),
   {ok,Pid}.
 
 %% @doc Shutdown our Monitor by killing the timer.
-uninit(Pid) ->
+destroy( _Reason, Pid ) ->
   Pid ! shutdown.
 
 %%% ==========================================================================
@@ -63,32 +50,23 @@ uninit(Pid) ->
 %% @doc Our looping function, we check the local time, and if a minute
 %%   has passed on the wall-clock, trigger an event.
 %% @end
-loop(BufferReference, PreviousTick) ->
+loop(EMP, PreviousTick) ->
   receive
     shutdown ->
       ok;
     _ -> % Ignore a message but force a trigger check.
-      check_if_trigger(BufferReference,PreviousTick)
+      check_if_trigger(EMP,PreviousTick)
   after % After every fraction of a minute check if the tick time changed.
     ?FRACTION ->
-      check_if_trigger(BufferReference,PreviousTick)
+      check_if_trigger(EMP,PreviousTick)
   end.
 
 %% @hidden
 %% @doc Check if the event should trigger, then jump back into `loop/2'.
-check_if_trigger(BufferReference,PreviousTick) ->
-  case current_tick() of
+check_if_trigger(EMP,PreviousTick) ->
+  case cron_time:current_tick() of
     PreviousTick -> ok;
-    NewTick -> libemp_monitor:trigger(BufferReference, NewTick)
+    NewTick -> libemp_monitor_api:emit(NewTick, EMP)
   end,
-  ?MODULE:loop(PreviousTick).
+  ?MODULE:loop(EMP, PreviousTick).
 
-%% @hidden
-%% @doc Get the current "tick" event based on the system time.
-current_tick() ->
-  {{Year,Month,Day}, {Hour,Minute,_sec}} = calendar:local_time(),
-  WkDay = case calendar:day_of_the_week(Year,Month,Day) of
-            7 -> 0; % We want Sunday = 0 not 7.
-            N -> N
-          end,
-  ?TICK_EVENT(Minute,Hour,Day,Month,WkDay).
