@@ -40,14 +40,14 @@ current_tick() ->
 %% @doc Given the elements of a Tick Event, compute the index into the map of
 %%    Commands stored on `cron_service'.
 %% @end
-compute_index(Mins,Hrs,Day,Mnth,Wkdy) ->
+compute_index(Mins,Hrs,Day,Mnth,_Wkdy) ->
   % 0008192301 = August 19th as a Sunday at 23:01 local time.
   % 00         > Weekday
   %   08       > Month
   %     19     > Day
   %       23   > Hour
   %         01 > Minute
-  Wkdy * 100000000 +
+%  Wkdy * 100000000 +   %% Ignoring wkday to reduce the number of potential indexes.
     Mnth * 1000000   +
     Day  * 10000     +
     Hrs  * 100       +
@@ -121,7 +121,8 @@ enumerate_indexes([Mins,Hrs,Days,Mnts,Wkdys]) ->
   %       foreach n in mnts
   %         foreach w in wkdys
   %           Indexes.append(compute_index(m,h,d,b,w))
-  Indexes = lists:foldl(fun(M, Is) ->
+  Indexes = sets:from_list(
+    lists:foldl(fun(M, Is) ->
     lists:append(Is,
       lists:foldl(fun(H,Is2) ->
         lists:append(Is2,
@@ -135,5 +136,5 @@ enumerate_indexes([Mins,Hrs,Days,Mnts,Wkdys]) ->
               end, [], Mnts))
           end, [], Days))
       end, [], Hrs))
-  end, [], Mins),
-  {ok, Indexes}.
+  end, [], Mins)),
+  {ok, sets:to_list(Indexes)}.

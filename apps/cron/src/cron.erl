@@ -3,7 +3,10 @@
 %%%     An Application wrapper around a local LibEMP service to implement a 
 %%%     simple cron. This can easily be extended to be distributed and run
 %%%     commands across multiple machines.
-%%% 
+%%%
+%%%     NOTE: For testing purposes only! Frequency String has the Weekday
+%%%     matching purposefully disabled.
+%%%
 -module( cron ).
 
 -export( [ start/0, stop/0 ] ).
