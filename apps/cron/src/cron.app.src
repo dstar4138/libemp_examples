@@ -3,7 +3,7 @@
   {description, "Example local only application for an event based Cron implementation."},
   {vsn,"0.1"},
   {registered, [cron]},
-  {applications, [kernel,stdlib,libemp]},
+  {applications, [kernel,stdlib]},
   {mod, {cron_app,[]}}
  ]
 }.

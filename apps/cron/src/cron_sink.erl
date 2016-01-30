@@ -19,6 +19,6 @@
 %% @doc On a tick, start the commands and as our supervisor to monitor them.
 process( {tick,Min,Hr,Day,Mnth,Wkdy}, _BufferRefrence, _State ) ->
   {ok,Cmds} = cron_service:signal_tick({Min,Hr,Day,Mnth,Wkdy}),
-  cron_cmd_sup:supervise_commands(Cmds),
+  cron_proc_sup:supervise_commands(Cmds),
   next. % Signal that any other sink in the stack can have the tick event.
 

@@ -23,16 +23,15 @@ validate_configs( Args ) ->
   end.
 
 %% @doc Set up the Alarm based on the configurations.
-setup( Args ) ->
-  {ok, create_state( Args )}.
+setup( Args ) -> create_state( Args ).
 
-%% @doc Process a tick event, based on the configuratio (i.e. make sure the tick
-%%    read off the queue is still valid).
+%% @doc Process a tick event, based on the configuration (i.e. make sure the
+%%    tick taken off the queue is still valid).
 %% @end
 process( {tick,_,_,_,_,_}=Tick, BufferRef, State ) ->
   case cron_time:current_tick() of
-    Tick -> alarm( Tick, BufferRef, State );
-    _ -> next
+    Tick -> next;
+    _    -> alarm( Tick, BufferRef, State )
   end.
 
 %%% ==========================================================================

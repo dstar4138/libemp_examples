@@ -8,37 +8,41 @@
 
 -export( [ start/0, stop/0 ] ).
 -export( [ register_cmd/2 ] ).
+-export( [ example_register/0 ]).
 
 -define(APP, cron).
 -define(CRON_CONFIG(BufferName), [
-        {monitor, BufferName, cron_monitor, []},
+        {monitor, BufferName, libemp_timer_monitor, []},
         {sink, cron_sink, []},
         {sink, cron_alarm_sink, [emit,log,drop]},
-        {stack, BufferName, [cron_alarm_sink, cron_sink]}
+        {stack, [cron_alarm_sink, cron_sink], BufferName}
 ]).
 
-%% @doc Start the Cron service.
+%% @doc Start the Cron service on the local node.
 start() -> start( default ).
 
-%% @doc Start the cron service and specify which buffer to use.
+%% @doc Start the cron service by loading it on the local node. This ensures
+%%   the node has been started, and the configs are loaded onto it.
+%% @end
 start( BufferName ) ->
-    application:start( ?APP ),
-    case libemp:ensure_started( ?CRON_CONFIG(BufferName) ) of
-        ok    -> ok;
-        Error ->
-          application:stop( ?APP ),
-          Error
-    end.
+  application:start( ?APP ),
+  libemp:wire( ?APP, ?CRON_CONFIG(BufferName) ).
 
-
-%% @doc Stop the Cron service.
+%% @doc Stop the Cron service on the local node.
 stop() ->
-    %TODO: uninstall monitor and sink
-    application:stop( cron ).
+  libemp:stop( ?APP ),
+  application:stop( ?APP ).
 
 %% @doc Register a command with the Cron service. Note, this registers the 
-%%   command to run on the local machine.
+%%   command to run on the local node.
 %% @end
 register_cmd( Frequency, Command ) ->
     cron_service:register_cmd( Frequency, Command ).
 
+%% @doc Register a logger for every tick, and an external command on every other.
+example_register() ->
+  EveryTime  = "* * * * *",
+  EveryOther = "*/2 * * * *",
+  cron:register_cmd(EveryTime, fun() -> error_logger:info_report("RAN_LOGGER!") end),
+  cron:register_cmd(EveryOther, "sleep 10; echo hithere"),
+  io:format("Added internal and external command for each and every other tick.").

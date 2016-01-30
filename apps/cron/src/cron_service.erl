@@ -98,7 +98,7 @@ add_prog( Indexes, Command, #state{freq_map = FreqMap} = State ) ->
 freq_map_updater(Command) ->
   fun(Index, FreqMap) ->
     CmdList = maps:get(Index, FreqMap, []),
-    maps:update(Index,[Command|CmdList],FreqMap)
+    FreqMap#{ Index => [Command|CmdList] }
   end.
 
 %% @hidden

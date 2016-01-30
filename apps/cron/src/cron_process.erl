@@ -26,7 +26,7 @@
 
 %% @doc Starts the server
 start_link( Command ) ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, [], [Command]).
+  gen_server:start_link(?MODULE, [Command], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -35,10 +35,8 @@ start_link( Command ) ->
 %% @private
 %% @doc Initializes the server around an Erlang Port.
 init([Command]) ->
-  case catch erlang:open_port({spawn,Command},[exit_status,{parallelism,true}]) of
-    {'EXIT',Reason} -> {stop,Reason};
-    Port -> {ok,Port}
-  end.
+  process_flag( trap_exit, true ),
+  make_and_link_process( Command ).
 
 %% @private
 %% @doc Handling call messages
@@ -50,7 +48,9 @@ handle_cast(_Msg, State) -> {noreply, State}.
 
 %% @private
 %% @doc Handling all non call/cast messages. Namely details from the open port.
-handle_info({Port, {exit_status,Reason}}, Port) -> {stop,Reason,noport};
+%TODO: save Reason in log.
+handle_info({'EXIT',Pid,_Reason}, Pid) -> {stop, shutdown, noport};
+handle_info({Port, {exit_status,_Reason}}, Port) -> {stop,shutdown,noport};
 handle_info({Port, _UnhandledMsg}, Port) -> {noreply, Port};
 handle_info(_Info, State) -> {noreply, State}.
 
@@ -62,3 +62,16 @@ terminate(_Reason, _State) -> ok.
 %% @doc Convert process state when code is changed
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
+%%%===================================================================
+%%% gen_server callbacks
+%%%===================================================================
+
+%% @doc Wrap a local process or external port in a gen_server to monitor it.
+make_and_link_process( Function ) when is_function(Function,0) ->
+  Pid = spawn_link( Function ),
+  {ok, Pid};
+make_and_link_process( Command ) when is_binary( Command ) orelse is_list( Command ) ->
+  case catch erlang:open_port({spawn,Command},[exit_status,{parallelism,true}]) of
+    {'EXIT',Reason} -> {stop,Reason};
+    Port -> {ok, Port}
+  end.
