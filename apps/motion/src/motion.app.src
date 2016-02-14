@@ -1,0 +1,9 @@
+{application, motion,
+ [
+  {description, "Example local webcam motion capture."},
+  {vsn,"0.1"},
+  {registered, [motion]},
+  {applications, [kernel,stdlib]}
+ ]
+}.
+
