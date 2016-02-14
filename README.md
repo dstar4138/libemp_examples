@@ -6,4 +6,7 @@ Local and Distributed Cron -
     a simple concept to show how a system can be expanded in a distributed manner
     easily with LibEMP.
 
+Webcam Motion Capture - 
+    Another app provided uses LibEMP and ErlCam to capture and catalog images
+    from your local webcam whenever it senses motion.
 
